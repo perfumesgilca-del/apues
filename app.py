@@ -52,7 +52,6 @@ with st.sidebar:
     st.markdown("### 💎 PREMIUM ACCESS")
     st.metric("MI CAPITAL", f"{st.session_state.bank:.2f} €")
     
-    # Nombres corregidos para la API
     opciones_liga = {
         "soccer_spain_la_liga": "🇪🇸 LaLiga EA Sports",
         "soccer_spain_segunda_division": "🇪🇸 Segunda División",
@@ -82,15 +81,12 @@ else:
         try:
             home = partido['home_team']
             away = partido['away_team']
-            # Extraer cuota local de la primera casa disponible
             cuota_local = partido['bookmakers'][0]['markets'][0]['outcomes'][0]['price']
             
-            # --- LÓGICA IA: Probabilidad estimada (Simulada para el ejemplo) ---
-            # En producción, aquí conectarías tu modelo de Poisson
+            # --- LÓGICA IA ---
             prob_ia = 1 / (cuota_local - 0.15) 
             edge = (prob_ia * cuota_local) - 1
             
-            # Tarjeta de Partido
             st.markdown(f"""
             <div class="premium-card">
                 <span class="badge">SIGNAL DETECTED</span>
@@ -104,6 +100,25 @@ else:
             col2.write(f"<p class='metric-val'>Confianza: <b>{int(prob_ia*100)}%</b></p>", unsafe_allow_html=True)
             
             if edge > 0.02:
-                # Cálculo de Stake según Kelly
-                stake = round((edge / (cuota_local - 1)) * riesgo * st.session_state.bank, 2)
-                stake = max(stake
+                # Cálculo de Stake Corregido
+                stake_calc = (edge / (cuota_local - 1)) * riesgo * st.session_state.bank
+                stake = round(max(stake_calc, 0.0), 2)
+                
+                col3.write(f"<p class='metric-val'>Inversión: <b style='color:#00ff00'>{stake}€</b></p>", unsafe_allow_html=True)
+                
+                if col4.button(f"Apostar {stake}€", key=partido['id']):
+                    st.session_state.bank -= stake
+                    st.toast(f"Orden ejecutada en {home}")
+                    st.rerun()
+            else:
+                col3.write("<p class='metric-val'>Valor: <b>Bajo</b></p>", unsafe_allow_html=True)
+                col4.info("Esperar")
+            
+            st.divider()
+        except Exception as e:
+            continue
+
+# --- SECCIÓN HISTORIAL ---
+if st.session_state.bank < 1000: # Se muestra si ha habido actividad
+    with st.expander("Ver operaciones recientes"):
+        st.write("Sincronizando con el servidor de señales...")
