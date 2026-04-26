@@ -6,34 +6,27 @@ from datetime import datetime
 # --- CONFIGURACIÓN DE TU LLAVE ---
 API_KEY = '47e6003535bac841cd890537c4b2674e'
 
-st.set_page_config(page_title="AI Betting Intelligence", layout="wide")
+# Configuración de página para móviles y escritorio
+st.set_page_config(page_title="AI BETTING INTELLIGENCE", layout="wide", initial_sidebar_state="expanded")
 
-# --- ESTILO VISUAL DE ALTO VALOR ---
+# --- ESTILO PROFESIONAL (DARK GOLD) ---
 st.markdown("""
     <style>
-    .stApp { background-color: #0e1117; color: white; }
-    .card {
-        background-color: #161b22;
-        padding: 20px;
-        border-radius: 12px;
-        border: 1px solid #30363d;
-        margin-bottom: 15px;
+    .stApp { background-color: #0b0e11; color: #ffffff; }
+    .premium-card { 
+        background: linear-gradient(135deg, #161b22 0%, #1c2128 100%);
+        padding: 20px; border-radius: 12px; border: 1px solid #30363d;
+        margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.5);
     }
-    .premium-label {
-        background-color: #d4af37;
-        color: black;
-        padding: 2px 8px;
-        border-radius: 4px;
-        font-weight: bold;
-        font-size: 12px;
-    }
-    .pick-highlight { color: #00ff00; font-size: 18px; font-weight: bold; }
+    .badge { background-color: #d4af37; color: black; padding: 2px 10px; border-radius: 5px; font-weight: bold; font-size: 11px; }
+    .pick-text { color: #00ff00; font-size: 20px; font-weight: bold; margin: 10px 0; }
+    .metric-val { font-size: 18px; color: #8b949e; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- FUNCIÓN PARA OBTENER DATOS REALES ---
-def get_live_odds(sport):
-    url = f'https://api.the-odds-api.com/v4/sports/{sport}/odds/'
+# --- MOTOR DE DATOS REALES ---
+def get_live_data(liga_id):
+    url = f'https://api.the-odds-api.com/v4/sports/{liga_id}/odds/'
     params = {
         'apiKey': API_KEY,
         'regions': 'eu',
@@ -42,75 +35,75 @@ def get_live_odds(sport):
     }
     try:
         response = requests.get(url, params=params)
-        return response.json()
+        if response.status_code == 200:
+            return response.json()
+        else:
+            return None
     except:
-        return []
+        return None
 
-# --- INICIALIZACIÓN ---
+# --- ESTADO DE LA APP ---
 if 'bank' not in st.session_state: st.session_state.bank = 100.0
+if 'history' not in st.session_state: st.session_state.history = []
 
-# --- SIDEBAR ---
+# --- PANEL LATERAL ---
 with st.sidebar:
-    st.title("💎 AI Premium")
-    st.metric("MI SALDO", f"{st.session_state.bank:.2f} €")
-    liga = st.selectbox("Seleccionar Liga", 
-                        ["soccer_spain_la_liga", "soccer_spain_la_liga_2", "soccer_epl"])
-    riesgo = st.slider("Nivel de Riesgo (Kelly)", 0.1, 0.5, 0.2)
-    if st.button("🔄 Sincronizar Mercados"):
+    st.image("https://cdn-icons-png.flaticon.com/512/2533/2533515.png", width=80)
+    st.markdown("### 💎 PREMIUM ACCESS")
+    st.metric("MI CAPITAL", f"{st.session_state.bank:.2f} €")
+    
+    # Nombres corregidos para la API
+    opciones_liga = {
+        "soccer_spain_la_liga": "🇪🇸 LaLiga EA Sports",
+        "soccer_spain_segunda_division": "🇪🇸 Segunda División",
+        "soccer_epl": "🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League"
+    }
+    
+    liga_sel = st.selectbox("Mercado Actual", options=list(opciones_liga.keys()), 
+                            format_func=lambda x: opciones_liga[x])
+    
+    riesgo = st.select_slider("Perfil de Riesgo", options=[0.1, 0.2, 0.3, 0.4, 0.5], value=0.2)
+    
+    if st.button("🔄 Refrescar Cuotas"):
         st.rerun()
 
-# --- CUERPO PRINCIPAL ---
-st.title("🎯 Señales Inteligentes en Tiempo Real")
-st.write(f"Datos actualizados: {datetime.now().strftime('%H:%M:%S')}")
+# --- DASHBOARD ---
+st.title("🛡️ AI Betting Terminal")
+st.write(f"Actualización del mercado: {datetime.now().strftime('%d/%m/%Y %H:%M')}")
 
-datos_api = get_live_odds(liga)
+datos = get_live_data(liga_sel)
 
-if not datos_api or "error" in str(datos_api):
-    st.error("Error al conectar con la API. Revisa si has alcanzado el límite gratuito o si la llave es correcta.")
+if datos is None:
+    st.error("⚠️ Error de conexión. Verifica el límite de tu API Key o la conexión.")
+elif len(datos) == 0:
+    st.info("No hay partidos disponibles para esta liga en las próximas horas.")
 else:
-    for partido in datos_api:
-        # Extraer cuotas del primer bookmaker disponible
+    for partido in datos:
         try:
-            home_team = partido['home_team']
-            away_team = partido['away_team']
-            bookie = partido['bookmakers'][0]
-            market = bookie['markets'][0]
+            home = partido['home_team']
+            away = partido['away_team']
+            # Extraer cuota local de la primera casa disponible
+            cuota_local = partido['bookmakers'][0]['markets'][0]['outcomes'][0]['price']
             
-            # Cuotas: 0=Local, 1=Visitante, 2=Empate (depende de la API)
-            outcomes = market['outcomes']
-            c_local = next(o['price'] for o in outcomes if o['name'] == home_team)
-            c_visit = next(o['price'] for o in outcomes if o['name'] == away_team)
+            # --- LÓGICA IA: Probabilidad estimada (Simulada para el ejemplo) ---
+            # En producción, aquí conectarías tu modelo de Poisson
+            prob_ia = 1 / (cuota_local - 0.15) 
+            edge = (prob_ia * cuota_local) - 1
             
-            # --- SIMULACIÓN DE IA (Lógica de valor) ---
-            # Aquí la IA detecta una probabilidad mayor a la de la cuota
-            prob_ia = 1 / (c_local - 0.2) # Simulamos que la IA ve más probable al local
-            edge = (prob_ia * c_local) - 1
-            
-            # --- RENDERIZADO DE TARJETA ---
+            # Tarjeta de Partido
             st.markdown(f"""
-            <div class="card">
-                <span class="premium-label">PREMIUM AI SIGNAL</span>
-                <div style="margin-top:10px;">
-                    <span style="font-size:20px;">{home_team} vs {away_team}</span>
-                </div>
+            <div class="premium-card">
+                <span class="badge">SIGNAL DETECTED</span>
+                <div style="margin-top:10px; font-size:22px; font-weight:bold;">{home} vs {away}</div>
+                <div class="pick-text">PICK: GANA {home.upper()}</div>
             </div>
             """, unsafe_allow_html=True)
             
             col1, col2, col3, col4 = st.columns(4)
-            col1.metric("Cuota Casa", c_local)
-            col2.metric("Prob. IA", f"{int(prob_ia*100)}%")
+            col1.write(f"<p class='metric-val'>Cuota: <b>{cuota_local}</b></p>", unsafe_allow_html=True)
+            col2.write(f"<p class='metric-val'>Confianza: <b>{int(prob_ia*100)}%</b></p>", unsafe_allow_html=True)
             
-            if edge > 0.05:
-                stake = round((edge / (c_local - 1)) * riesgo * st.session_state.bank, 2)
-                col3.markdown(f"**APUESTA:** <br><span class='pick-highlight'>GANA {home_team.upper()}</span>", unsafe_allow_html=True)
-                if col4.button(f"Invertir {stake}€", key=partido['id']):
-                    st.session_state.bank -= stake
-                    st.success("¡Apuesta añadida al historial!")
-                    st.rerun()
-            else:
-                col3.write("Analizando...")
-                col4.info("Sin valor claro")
-            
-            st.divider()
-        except:
-            continue
+            if edge > 0.02:
+                # Cálculo de Stake según Kelly
+                stake = round((edge / (cuota_local - 1)) * riesgo * st.session_state.bank, 2)
+                stake = max(stake
