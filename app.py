@@ -1,58 +1,90 @@
 import streamlit as st
 import pandas as pd
+import datetime
 
-# 1. Configuración de Seguridad
-def calculate_kelly(prob, odds, bankroll, risk_factor=0.25):
-    if prob is None or odds <= 1: return 0, 0, 0
-    edge = (prob * odds) - 1
-    if edge <= 0: return 0, 0, 0
-    
-    # Criterio de Kelly Fraccionado
-    kelly_stake = (edge / (odds - 1)) * risk_factor
-    # Cap de seguridad del 5%
-    stake_final = min(kelly_stake, 0.05) * bankroll
-    return round(stake_final, 2), round(edge * 100, 2), round(kelly_stake * 100, 2)
+# --- CONFIGURACIÓN DE PÁGINA ---
+st.set_page_config(page_title="IA Betting Pro - Dashboard", layout="wide", initial_sidebar_state="expanded")
 
-def main():
-    st.set_page_config(page_title="IA Betting PRO", layout="wide")
-    st.title("⚽ Panel de Control de Bankroll")
+# --- ESTILO PERSONALIZADO (CSS) ---
+st.markdown("""
+    <style>
+    .main { background-color: #0e1117; }
+    .stMetric { background-color: #1e2130; padding: 15px; border-radius: 10px; border: 1px solid #3e445b; }
+    .stButton>button { width: 100%; border-radius: 5px; height: 3em; background-color: #2e7d32; color: white; }
+    .bet-card { background-color: #161b22; padding: 20px; border-radius: 15px; border-left: 5px solid #238636; margin-bottom: 10px; }
+    </style>
+    """, unsafe_allow_html=True)
 
-    # 2. Sidebar - Gestión de Dinero
-    st.sidebar.header("Configuración")
-    if 'bank' not in st.session_state:
+# --- LÓGICA FINANCIERA ---
+def calcular_stake_profesional(prob, cuota, bankroll, riesgo):
+    edge = (prob * cuota) - 1
+    if edge <= 0: return 0, 0
+    kelly_pct = (edge / (cuota - 1)) * riesgo
+    stake = min(kelly_pct, 0.05) * bankroll  # Nunca más del 5%
+    return round(stake, 2), round(edge * 100, 1)
+
+# --- ESTADO DE LA APP ---
+if 'bank' not in st.session_state: st.session_state.bank = 100.0
+if 'historial' not in st.session_state: st.session_state.historial = []
+
+# --- SIDEBAR PROFESIONAL ---
+with st.sidebar:
+    st.image("https://cdn-icons-png.flaticon.com/512/3408/3408506.png", width=100)
+    st.title("Gestión de Bankroll")
+    st.metric("Saldo Disponible", f"{st.session_state.bank:.2f} €", delta_color="normal")
+    riesgo = st.select_slider("Perfil de Riesgo", options=[0.1, 0.2, 0.3, 0.4, 0.5], value=0.2, help="0.1 = Conservador, 0.5 = Agresivo")
+    if st.button("🔄 Resetear Sistema"):
         st.session_state.bank = 100.0
-    
-    st.session_state.bank = st.sidebar.number_input("Bankroll Actual (€)", value=float(st.session_state.bank))
-    risk = st.sidebar.slider("Nivel de Riesgo (Kelly)", 0.1, 0.5, 0.25)
-
-    # 3. Partidos de Prueba (Datos limpios)
-    st.subheader("Oportunidades de Hoy")
-    partidos = [
-        {"liga": "LaLiga 2", "partido": "Real Oviedo vs Sporting", "cuota": 2.30, "prob": 0.52},
-        {"liga": "Premier", "partido": "Arsenal vs Chelsea", "cuota": 1.95, "prob": 0.62},
-        {"liga": "LaLiga", "partido": "Sevilla vs Betis", "cuota": 3.20, "prob": 0.35}
-    ]
-
-    for p in partidos:
-        stake, edge, k_pct = calculate_kelly(p['prob'], p['cuota'], st.session_state.bank, risk)
-        
-        with st.container():
-            col1, col2, col3, col4 = st.columns(4)
-            col1.write(f"**{p['partido']}**")
-            col2.write(f"Cuota: {p['cuota']}")
-            col3.write(f"Edge: {edge}%")
-            
-            if stake > 0:
-                if col4.button(f"Apostar {stake}€", key=p['partido']):
-                    st.session_state.bank -= stake
-                    st.success(f"Apuesta registrada. Nuevo Bank: {st.session_state.bank}€")
-                    st.rerun()
-            else:
-                col4.write("Sin valor")
-
-    if st.sidebar.button("Resetear a 100€"):
-        st.session_state.bank = 100.0
+        st.session_state.historial = []
         st.rerun()
 
-if __name__ == "__main__":
-    main()
+# --- CUERPO PRINCIPAL ---
+t1, t2 = st.tabs(["🎯 Oportunidades del Día", "📈 Mi Rendimiento"])
+
+with t1:
+    st.subheader("Predicciones de la IA")
+    
+    # Simulación de una base de datos más amplia
+    datos_partidos = [
+        {"liga": "🇪🇸 LaLiga Hypermotion", "local": "Real Oviedo", "visitante": "Sporting", "cuota": 2.45, "prob": 0.55},
+        {"liga": "🇪🇸 LaLiga Hypermotion", "local": "Zaragoza", "visitante": "Levante", "cuota": 2.10, "prob": 0.52},
+        {"liga": "🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League", "local": "Arsenal", "visitante": "Chelsea", "cuota": 1.85, "prob": 0.68},
+        {"liga": "🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League", "local": "Liverpool", "visitante": "Everton", "cuota": 1.45, "prob": 0.75},
+        {"liga": "🇪🇸 LaLiga", "local": "Sevilla", "visitante": "Betis", "cuota": 3.40, "prob": 0.38},
+        {"liga": "🇪🇸 LaLiga", "local": "Real Madrid", "visitante": "Barcelona", "cuota": 2.15, "prob": 0.51}
+    ]
+
+    for p in datos_partidos:
+        stake, edge = calcular_stake_profesional(p['prob'], p['cuota'], st.session_state.bank, riesgo)
+        
+        with st.container():
+            st.markdown(f"""<div class="bet-card">
+                <small>{p['liga']}</small><br>
+                <strong>{p['local']} vs {p['visitante']}</strong>
+                </div>""", unsafe_allow_html=True)
+            
+            c1, c2, c3, c4 = st.columns(4)
+            c1.metric("Cuota", p['cuota'])
+            c2.metric("Prob. IA", f"{int(p['prob']*100)}%")
+            c3.metric("Valor (Edge)", f"{edge}%")
+            
+            if stake > 0:
+                if c4.button(f"Invertir {stake}€", key=p['local']):
+                    st.session_state.bank -= stake
+                    st.session_state.historial.append({
+                        "Fecha": datetime.datetime.now().strftime("%H:%M:%S"),
+                        "Evento": f"{p['local']} vs {p['visitante']}",
+                        "Inversión": stake
+                    })
+                    st.toast(f"¡Orden ejecutada! -{stake}€")
+                    st.rerun()
+            else:
+                c4.warning("Sin valor")
+
+with t2:
+    st.subheader("Historial de Movimientos")
+    if st.session_state.historial:
+        df = pd.DataFrame(st.session_state.historial)
+        st.table(df)
+    else:
+        st.info("Aún no has realizado operaciones hoy.")
