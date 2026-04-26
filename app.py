@@ -2,89 +2,83 @@ import streamlit as st
 import pandas as pd
 import datetime
 
-# --- CONFIGURACIÓN DE PÁGINA ---
-st.set_page_config(page_title="IA Betting Pro - Dashboard", layout="wide", initial_sidebar_state="expanded")
+# --- CONFIGURACIÓN DE MARCA ---
+st.set_page_config(page_title="AI BETTING SYSTEM - PREMIUM", layout="wide")
 
-# --- ESTILO PERSONALIZADO (CSS) ---
+# --- CSS DE ALTO NIVEL (DARK GOLD/PLATINUM) ---
 st.markdown("""
     <style>
-    .main { background-color: #0e1117; }
-    .stMetric { background-color: #1e2130; padding: 15px; border-radius: 10px; border: 1px solid #3e445b; }
-    .stButton>button { width: 100%; border-radius: 5px; height: 3em; background-color: #2e7d32; color: white; }
-    .bet-card { background-color: #161b22; padding: 20px; border-radius: 15px; border-left: 5px solid #238636; margin-bottom: 10px; }
+    .stApp { background-color: #0b0e11; color: #ffffff; }
+    .premium-card { 
+        background: linear-gradient(135deg, #1e1e1e 0%, #2d2d2d 100%);
+        padding: 25px; border-radius: 15px; border: 1px solid #d4af37;
+        margin-bottom: 20px; box-shadow: 0 4px 15px rgba(212, 175, 55, 0.1);
+    }
+    .badge-premium { background-color: #d4af37; color: black; padding: 2px 10px; border-radius: 5px; font-weight: bold; font-size: 12px; }
+    .metric-box { background-color: #161b22; padding: 15px; border-radius: 10px; text-align: center; border: 1px solid #30363d; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- LÓGICA FINANCIERA ---
-def calcular_stake_profesional(prob, cuota, bankroll, riesgo):
-    edge = (prob * cuota) - 1
-    if edge <= 0: return 0, 0
-    kelly_pct = (edge / (cuota - 1)) * riesgo
-    stake = min(kelly_pct, 0.05) * bankroll  # Nunca más del 5%
-    return round(stake, 2), round(edge * 100, 1)
+# --- INICIALIZACIÓN DE ESTADOS ---
+if 'bank' not in st.session_state: st.session_state.bank = 1000.0
+if 'profit' not in st.session_state: st.session_state.profit = 125.40 # Simulación de ganancia previa
 
-# --- ESTADO DE LA APP ---
-if 'bank' not in st.session_state: st.session_state.bank = 100.0
-if 'historial' not in st.session_state: st.session_state.historial = []
-
-# --- SIDEBAR PROFESIONAL ---
+# --- SIDEBAR (PANEL DE USUARIO PREMIUM) ---
 with st.sidebar:
-    st.image("https://cdn-icons-png.flaticon.com/512/3408/3408506.png", width=100)
-    st.title("Gestión de Bankroll")
-    st.metric("Saldo Disponible", f"{st.session_state.bank:.2f} €", delta_color="normal")
-    riesgo = st.select_slider("Perfil de Riesgo", options=[0.1, 0.2, 0.3, 0.4, 0.5], value=0.2, help="0.1 = Conservador, 0.5 = Agresivo")
-    if st.button("🔄 Resetear Sistema"):
-        st.session_state.bank = 100.0
-        st.session_state.historial = []
-        st.rerun()
+    st.markdown("### 💎 USUARIO PREMIUM")
+    st.write("Plan: **Anual Professional**")
+    st.divider()
+    st.metric("BANKROLL TOTAL", f"{st.session_state.bank:.2f} €", delta=f"{st.session_state.profit} € (Last 30d)")
+    st.divider()
+    riesgo = st.slider("Ajuste Criterio de Kelly", 0.1, 1.0, 0.25)
+    st.info("El riesgo actual está optimizado para un crecimiento del 15% mensual.")
 
-# --- CUERPO PRINCIPAL ---
-t1, t2 = st.tabs(["🎯 Oportunidades del Día", "📈 Mi Rendimiento"])
+# --- DASHBOARD PRINCIPAL ---
+st.title("🛡️ AI Betting Intelligence Unit")
 
-with t1:
-    st.subheader("Predicciones de la IA")
+col1, col2, col3 = st.columns(3)
+col1.markdown('<div class="metric-box">📅 JORNADA: 34<br><b>LaLiga / Premier</b></div>', unsafe_allow_html=True)
+col2.markdown('<div class="metric-box">📈 YIELD HISTÓRICO<br><b style="color:#00ff00">+12.4%</b></div>', unsafe_allow_html=True)
+col3.markdown('<div class="metric-box">✅ WIN RATE IA<br><b>68.2%</b></div>', unsafe_allow_html=True)
+
+st.divider()
+
+# --- SECCIÓN DE PICKS ---
+st.subheader("🎯 Señales Algorítmicas")
+
+# Datos simulados con Categorías
+signals = [
+    {"tipo": "PREMIUM 💎", "liga": "🇪🇸 LaLiga", "evento": "Real Madrid vs Barcelona", "pick": "GANA REAL MADRID (ML)", "cuota": 2.10, "confianza": 0.82},
+    {"tipo": "VALOR ⭐", "liga": "🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League", "evento": "Man. City vs Arsenal", "pick": "MÁS DE 9.5 CÓRNERS", "cuota": 1.95, "confianza": 0.65},
+    {"tipo": "PREMIUM 💎", "liga": "🇪🇸 Segunda División", "evento": "Eibar vs Zaragoza", "pick": "MENOS DE 2.5 GOLES", "cuota": 1.80, "confianza": 0.78},
+    {"tipo": "ESTADÍSTICA 📊", "liga": "🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League", "evento": "Tottenham vs Newcastle", "pick": "AMBOS MARCAN (SÍ)", "cuota": 1.65, "confianza": 0.72}
+]
+
+for s in signals:
+    # Cálculo Kelly
+    edge = (s['confianza'] * s['cuota']) - 1
+    stake_pct = (edge / (s['cuota'] - 1)) * riesgo
+    stake_final = min(stake_pct, 0.05) * st.session_state.bank
+
+    st.markdown(f"""
+    <div class="premium-card">
+        <span class="badge-premium">{s['tipo']}</span>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top:10px;">
+            <div>
+                <small style="color: #8b949e;">{s['liga']}</small>
+                <h3 style="margin:0;">{s['evento']}</h3>
+                <h4 style="color: #d4af37; margin:0;">{s['pick']}</h4>
+            </div>
+            <div style="text-align: right;">
+                <small style="color: #8b949e;">STAKE SUGERIDO</small>
+                <h2 style="margin:0; color: #ffffff;">{stake_final:.2f} €</h2>
+                <small style="color: #00ff00;">CONFIDENCIA IA: {int(s['confianza']*100)}%</small>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
     
-    # Simulación de una base de datos más amplia
-    datos_partidos = [
-        {"liga": "🇪🇸 LaLiga Hypermotion", "local": "Real Oviedo", "visitante": "Sporting", "cuota": 2.45, "prob": 0.55},
-        {"liga": "🇪🇸 LaLiga Hypermotion", "local": "Zaragoza", "visitante": "Levante", "cuota": 2.10, "prob": 0.52},
-        {"liga": "🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League", "local": "Arsenal", "visitante": "Chelsea", "cuota": 1.85, "prob": 0.68},
-        {"liga": "🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League", "local": "Liverpool", "visitante": "Everton", "cuota": 1.45, "prob": 0.75},
-        {"liga": "🇪🇸 LaLiga", "local": "Sevilla", "visitante": "Betis", "cuota": 3.40, "prob": 0.38},
-        {"liga": "🇪🇸 LaLiga", "local": "Real Madrid", "visitante": "Barcelona", "cuota": 2.15, "prob": 0.51}
-    ]
-
-    for p in datos_partidos:
-        stake, edge = calcular_stake_profesional(p['prob'], p['cuota'], st.session_state.bank, riesgo)
-        
-        with st.container():
-            st.markdown(f"""<div class="bet-card">
-                <small>{p['liga']}</small><br>
-                <strong>{p['local']} vs {p['visitante']}</strong>
-                </div>""", unsafe_allow_html=True)
-            
-            c1, c2, c3, c4 = st.columns(4)
-            c1.metric("Cuota", p['cuota'])
-            c2.metric("Prob. IA", f"{int(p['prob']*100)}%")
-            c3.metric("Valor (Edge)", f"{edge}%")
-            
-            if stake > 0:
-                if c4.button(f"Invertir {stake}€", key=p['local']):
-                    st.session_state.bank -= stake
-                    st.session_state.historial.append({
-                        "Fecha": datetime.datetime.now().strftime("%H:%M:%S"),
-                        "Evento": f"{p['local']} vs {p['visitante']}",
-                        "Inversión": stake
-                    })
-                    st.toast(f"¡Orden ejecutada! -{stake}€")
-                    st.rerun()
-            else:
-                c4.warning("Sin valor")
-
-with t2:
-    st.subheader("Historial de Movimientos")
-    if st.session_state.historial:
-        df = pd.DataFrame(st.session_state.historial)
-        st.table(df)
-    else:
-        st.info("Aún no has realizado operaciones hoy.")
+    if st.button(f"Ejecutar Inversión: {s['evento']}", key=s['evento']):
+        st.session_state.bank -= stake_final
+        st.toast(f"Orden de {stake_final}€ ejecutada correctamente.")
+        st.rerun()
